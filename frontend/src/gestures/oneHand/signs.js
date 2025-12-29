@@ -23,4 +23,36 @@ export const ONE_HAND_SIGNS = [
     name: "FOUR",
     fingers: { thumb: true, index: true, middle: true, ring: true, pinky: false },
   },
+  {
+    name: "THUMBS_UP",
+    match: ({ fingers, landmarks }) => {
+      const tip = landmarks[4]; // thumb tip
+      const ip  = landmarks[3]; // thumb IP
+
+      return (
+        fingers.thumb === true &&
+        fingers.index === false &&
+        fingers.middle === false &&
+        fingers.ring === false &&
+        fingers.pinky === false &&
+        (ip.y - tip.y) > 0.08   // 🔑 clearly upward
+      );
+    }
+  },
+  {
+    name: "THUMBS_DOWN",
+    match: ({ fingers, landmarks }) => {
+      const tip = landmarks[4];
+      const ip  = landmarks[3];
+
+      return (
+        fingers.thumb === true &&
+        fingers.index === false &&
+        fingers.middle === false &&
+        fingers.ring === false &&
+        fingers.pinky === false &&
+        (tip.y - ip.y) > 0.08   // 🔑 clearly downward
+      );
+    }
+  }
 ];

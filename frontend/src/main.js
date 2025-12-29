@@ -1,82 +1,76 @@
-import { setupCamera } from "./camera.js";
-import { detectHands } from "./handDetector.js";
-import { detectOneHandGesture } from "./gestures/oneHand/index.js";
-import { detectTwoHandGesture } from "./gestures/twoHand/index.js";
-
-let lastGesture = null;
-let sameGestureFrames = 0;
-
-let lockedGesture = null;
-let lockUntil = 0;
-
-// tuning values
-const REQUIRED_FRAMES = 7;     // how many frames to confirm
-const LOCK_DURATION = 500;    // ms to lock gesture
+// This file is adapted to integrate the new gesture detection system.
+// It includes camera setup and the MediaPipe onResults callback.
 
 const videoElement = document.getElementById("video");
-const outputElement = document.getElementById("gestureText");
+const canvasElement = document.getElementById("canvas");
+const canvasCtx = canvasElement.getContext("2d");
 
-function stabilizeGesture(rawGesture) {
-  const now = Date.now();
-
-  // If gesture is locked, keep showing it
-  if (lockedGesture && now < lockUntil) {
-    return lockedGesture;
-  }
-
-  // Lock expired
-  if (lockedGesture && now >= lockUntil) {
-    lockedGesture = null;
-  }
-
-  // Same as previous frame
-  if (rawGesture === lastGesture) {
-    sameGestureFrames++;
-  } else {
-    lastGesture = rawGesture;
-    sameGestureFrames = 1;
-  }
-
-  // Confirm gesture
-  if (sameGestureFrames >= REQUIRED_FRAMES && rawGesture !== null) {
-    lockedGesture = rawGesture;
-    lockUntil = now + LOCK_DURATION;
-    sameGestureFrames = 0;
-    return rawGesture;
-  }
-
-  return null;
-}
-
+/**
+ * The main callback function that processes MediaPipe results.
+ * @param {Object} results - The hand detection results from MediaPipe.
+ */
 function onResults(results) {
-  const detection = detectHands(results);
+  // --- Standard MediaPipe drawing ---
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  canvasCtx.drawImage(
+    results.image,
+    0,
+    0,
+    canvasElement.width,
+    canvasElement.height
+  );
 
-  if (detection.count === 0) {
-    outputElement.innerText = "No hands detected";
-    return;
-  }
-
-  if (detection.count === 1) {
-    const raw = detectOneHandGesture(detection.hands[0].landmarks);
-    const stable = stabilizeGesture(raw);
-
-    if (stable) {
-      outputElement.innerText = `Gesture: ${stable}`;
+  if (results.multiHandLandmarks) {
+    for (const landmarks of results.multiHandLandmarks) {
+      window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, {
+        color: "#00FF00",
+        lineWidth: 2,
+      });
+      window.drawLandmarks(canvasCtx, landmarks, {
+        color: "#FF0000",
+        lineWidth: 1,
+      });
     }
-
-    return;
   }
+  canvasCtx.restore();
+  // --- End of standard drawing ---
 
-  if (detection.count === 2) {
-    const raw = detectTwoHandGesture(detection.hands);
-    const stable = stabilizeGesture(raw);
-
-    if (stable) {
-      outputElement.innerText = stable;
-    }
-
-    return;
-  }
+  // ✅ ADDED THESE 2 LINES FOR NEW GESTURE SYSTEM
+  const gesture = processGestureDetection(results);
+  updateGestureUI(gesture);
 }
 
+/**
+ * Sets up the camera and MediaPipe Hands instance.
+ * @param {HTMLVideoElement} videoElement - The video element to use for camera input.
+ * @param {Function} onResults - The callback function for MediaPipe results.
+ */
+function setupCamera(videoElement, onResults) {
+  const hands = new window.Hands({
+    locateFile: (file) =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+  });
+
+  hands.setOptions({
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.7,
+  });
+
+  hands.onResults(onResults);
+
+  const camera = new window.Camera(videoElement, {
+    onFrame: async () => {
+      await hands.send({ image: videoElement });
+    },
+    width: 640,
+    height: 480,
+  });
+
+  camera.start();
+}
+
+// Initialize the camera and gesture detection
 setupCamera(videoElement, onResults);

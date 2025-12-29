@@ -12,7 +12,10 @@
   <div class="camera-container">
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
-    <div id="gestureText">Gesture: None</div>
+    <div class="gesture-container">
+      <h2>Detected Gesture:</h2>
+      <div id="gesture-text">No gesture detected</div>
+    </div>
     <!-- SPEECH TO TEXT SECTION -->
     <div class="speech-box">
       <h3>Speech to Text</h3>
@@ -39,7 +42,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
   <!-- Your App -->
-  <script type="module" src="./src/main.js"></script>
+  <script src="src/gesture-detection.js"></script>
+  <script src="./src/main.js"></script>
 
 
 </body>
