@@ -52,6 +52,11 @@ document.getElementById('stop-listening')?.addEventListener('click', () => {
 });
 
 // ========================================
+// GESTURE DETECTOR SETUP
+// ========================================
+const gestureDetector = new ImprovedGestureDetector();
+
+// ========================================
 // MEDIAPIPE HANDS SETUP
 // ========================================
 
@@ -114,7 +119,7 @@ hands.onResults((results) => {
     // GESTURE DETECTION (INTEGRATED)
     // ========================================
     try {
-        const gesture = processGestureDetection(results);
+        const gesture = gestureDetector.process(results);
         updateGestureUI(gesture);
     } catch (error) {
         console.error('Gesture detection error:', error);
@@ -122,6 +127,41 @@ hands.onResults((results) => {
         gestureText.style.color = '#ff0000';
     }
 });
+
+// ========================================
+// UI UPDATE FUNCTION
+// ========================================
+function updateGestureUI(gesture) {
+  const gestureTextElement = document.getElementById('gesture-text');
+  
+  if (!gestureTextElement) {
+    console.error('Gesture text element not found!');
+    return;
+  }
+  
+  if (!gesture) {
+    gestureTextElement.textContent = "No gesture detected";
+    gestureTextElement.style.color = "#999";
+    return;
+  }
+
+  const displayName = formatGestureName(gesture);
+  gestureTextElement.textContent = displayName;
+  gestureTextElement.style.color = "#00ff00";
+
+  gestureTextElement.classList.add('gesture-detected');
+  setTimeout(() => {
+    gestureTextElement.classList.remove('gesture-detected');
+  }, 300);
+}
+
+function formatGestureName(gesture) {
+  return gesture
+    .split('_')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 
 // ========================================
 // CAMERA SETUP
